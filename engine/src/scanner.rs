@@ -3,6 +3,7 @@ use std::path::Path;
 
 use crate::model::entry::{Entry, EntryType};
 use crate::model::entry_attributes::EntryAttributes;
+use crate::model::entry_metadata::EntryMetadata;
 use crate::model::scan_result::ScanResult;
 
 pub struct Scanner;
@@ -32,15 +33,11 @@ impl Scanner {
                         EntryType::File
                     };
 
-                    let logical_size = match item.metadata() {
-                        Ok(metadata) => {
-                            if metadata.is_file() {
-                                metadata.len()
-                            } else {
-                                0
-                            }
-                        }
-                        Err(_) => 0,
+                    let metadata = item.metadata().ok();
+
+                    let logical_size = match &metadata {
+                        Some(metadata) if metadata.is_file() => metadata.len(),
+                        _ => 0,
                     };
 
                     let children = match entry_type {
@@ -51,14 +48,29 @@ impl Scanner {
                     entries.push(Entry {
                         name: item.file_name().to_string_lossy().into_owned(),
                         path: path.clone(),
+
                         entry_type,
-                        logical_size,
+
+                        metadata: EntryMetadata {
+                            logical_size,
+                            created: metadata
+                                .as_ref()
+                                .and_then(|metadata| metadata.created().ok()),
+                            modified: metadata
+                                .as_ref()
+                                .and_then(|metadata| metadata.modified().ok()),
+                            accessed: metadata
+                                .as_ref()
+                                .and_then(|metadata| metadata.accessed().ok()),
+                        },
+
                         attributes: EntryAttributes {
                             hidden: false,
                             system: false,
                             read_only: false,
                             archive: false,
                         },
+
                         children,
                     });
                 }

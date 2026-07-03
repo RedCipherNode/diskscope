@@ -25,7 +25,7 @@ fn print_entries(entries: &[Entry], depth: usize) {
 
         println!(
             "{}{} {} ({} B)",
-            indent, icon, entry.name, entry.logical_size
+            indent, icon, entry.name, entry.metadata.logical_size
         );
 
         print_entries(&entry.children, depth + 1);
