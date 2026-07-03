@@ -1,8 +1,9 @@
 use std::fs;
 use std::path::Path;
 
-use crate::entry::{Entry, EntryType};
-use crate::scan_result::ScanResult;
+use crate::model::entry::{Entry, EntryType};
+use crate::model::entry_attributes::EntryAttributes;
+use crate::model::scan_result::ScanResult;
 
 pub struct Scanner;
 
@@ -12,26 +13,53 @@ impl Scanner {
     }
 
     pub fn scan(&self, path: &Path) -> ScanResult {
+        ScanResult {
+            entries: self.scan_directory(path),
+        }
+    }
+
+    fn scan_directory(&self, path: &Path) -> Vec<Entry> {
         let mut entries = Vec::new();
 
         if let Ok(directory) = fs::read_dir(path) {
             for item in directory {
                 if let Ok(item) = item {
-                    let entry_type = if item.path().is_dir() {
+                    let path = item.path();
+
+                    let entry_type = if path.is_dir() {
                         EntryType::Directory
                     } else {
                         EntryType::File
                     };
 
+                    let logical_size = match item.metadata() {
+                        Ok(metadata) => {
+                            if metadata.is_file() {
+                                metadata.len()
+                            } else {
+                                0
+                            }
+                        }
+                        Err(_) => 0,
+                    };
+
                     entries.push(Entry {
                         name: item.file_name().to_string_lossy().into_owned(),
-                        path: item.path(),
+                        path,
                         entry_type,
+                        logical_size,
+                        attributes: EntryAttributes {
+                            hidden: false,
+                            system: false,
+                            read_only: false,
+                            archive: false,
+                        },
+                        children: Vec::new(),
                     });
                 }
             }
         }
 
-        ScanResult { entries }
+        entries
     }
 }

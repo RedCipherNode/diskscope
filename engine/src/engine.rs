@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::scan_result::ScanResult;
+use crate::model::scan_result::ScanResult;
 use crate::scanner::Scanner;
 
 pub struct Engine {
