@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use engine::engine::Engine;
+use engine::model::entry::Entry;
 use engine::model::entry::EntryType;
 
 fn main() {
@@ -10,12 +11,23 @@ fn main() {
 
     println!("DiskScope {}\n", engine.version());
 
-    for entry in result.entries {
+    print_entries(&result.entries, 0);
+}
+
+fn print_entries(entries: &[Entry], depth: usize) {
+    for entry in entries {
+        let indent = "  ".repeat(depth);
+
         let icon = match entry.entry_type {
             EntryType::Directory => "📁",
             EntryType::File => "📄",
         };
 
-        println!("{} {} ({} B)", icon, entry.name, entry.logical_size);
+        println!(
+            "{}{} {} ({} B)",
+            indent, icon, entry.name, entry.logical_size
+        );
+
+        print_entries(&entry.children, depth + 1);
     }
 }

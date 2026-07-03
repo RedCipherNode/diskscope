@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use crate::model::entry_attributes::EntryAttributes;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum EntryType {
     File,
     Directory,

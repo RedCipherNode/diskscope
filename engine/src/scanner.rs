@@ -43,9 +43,14 @@ impl Scanner {
                         Err(_) => 0,
                     };
 
+                    let children = match entry_type {
+                        EntryType::Directory => self.scan_directory(&path),
+                        EntryType::File => Vec::new(),
+                    };
+
                     entries.push(Entry {
                         name: item.file_name().to_string_lossy().into_owned(),
-                        path,
+                        path: path.clone(),
                         entry_type,
                         logical_size,
                         attributes: EntryAttributes {
@@ -54,7 +59,7 @@ impl Scanner {
                             read_only: false,
                             archive: false,
                         },
-                        children: Vec::new(),
+                        children,
                     });
                 }
             }
