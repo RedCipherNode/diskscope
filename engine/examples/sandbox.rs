@@ -9,9 +9,15 @@ fn main() {
 
     let result = engine.scan(Path::new("D:\\"));
 
+    let analysis = engine.analyze(&result);
+
     println!("DiskScope {}\n", engine.version());
 
     print_entries(&result.entries, 0);
+    println!();
+    println!("Total Files : {}", analysis.total_files);
+    println!("Total Directories : {}", analysis.total_directories);
+    println!("Total Logical Size : {} B", analysis.total_logical_size);
 }
 
 fn print_entries(entries: &[Entry], depth: usize) {
