@@ -1,23 +1,24 @@
-pub struct Engine;
+use std::path::Path;
+
+use crate::scan_result::ScanResult;
+use crate::scanner::Scanner;
+
+pub struct Engine {
+    scanner: Scanner,
+}
 
 impl Engine {
     pub fn new() -> Self {
-        Self
+        Self {
+            scanner: Scanner::new(),
+        }
     }
 
     pub fn version(&self) -> &str {
         env!("CARGO_PKG_VERSION")
     }
-}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn engine_returns_version() {
-        let engine = Engine::new();
-
-        assert_eq!(engine.version(), env!("CARGO_PKG_VERSION"));
+    pub fn scan(&self, path: &Path) -> ScanResult {
+        self.scanner.scan(path)
     }
 }
