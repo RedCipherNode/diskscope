@@ -12,6 +12,7 @@ pub enum EntryType {
 pub struct Entry {
     // Identity
     pub name: String,
+    pub extension: Option<String>,
     pub path: PathBuf,
     pub entry_type: EntryType,
 

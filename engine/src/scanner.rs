@@ -1,9 +1,15 @@
 use std::fs;
+use std::os::windows::fs::MetadataExt;
 use std::path::Path;
+
+use windows_sys::Win32::Storage::FileSystem::{
+    FILE_ATTRIBUTE_ARCHIVE, FILE_ATTRIBUTE_HIDDEN, FILE_ATTRIBUTE_READONLY, FILE_ATTRIBUTE_SYSTEM,
+};
 
 use crate::model::entry::{Entry, EntryType};
 use crate::model::entry_attributes::EntryAttributes;
 use crate::model::entry_metadata::EntryMetadata;
+use crate::model::scan_error::ScanError;
 use crate::model::scan_result::ScanResult;
 
 pub struct Scanner;
@@ -14,69 +20,90 @@ impl Scanner {
     }
 
     pub fn scan(&self, path: &Path) -> ScanResult {
+        let mut errors = Vec::new();
+
         ScanResult {
-            entries: self.scan_directory(path),
+            entries: self.scan_directory(path, &mut errors),
+            errors,
         }
     }
 
-    fn scan_directory(&self, path: &Path) -> Vec<Entry> {
+    fn scan_directory(&self, path: &Path, errors: &mut Vec<ScanError>) -> Vec<Entry> {
         let mut entries = Vec::new();
 
-        if let Ok(directory) = fs::read_dir(path) {
-            for item in directory {
-                if let Ok(item) = item {
-                    let path = item.path();
+        match fs::read_dir(path) {
+            Ok(directory) => {
+                for item in directory {
+                    if let Ok(item) = item {
+                        let path = item.path();
 
-                    let entry_type = if path.is_dir() {
-                        EntryType::Directory
-                    } else {
-                        EntryType::File
-                    };
+                        let entry_type = if path.is_dir() {
+                            EntryType::Directory
+                        } else {
+                            EntryType::File
+                        };
 
-                    let metadata = item.metadata().ok();
+                        let extension = path
+                            .extension()
+                            .and_then(|ext| ext.to_str())
+                            .map(|ext| ext.to_ascii_lowercase());
 
-                    let logical_size = match &metadata {
-                        Some(metadata) if metadata.is_file() => metadata.len(),
-                        _ => 0,
-                    };
+                        let metadata = item.metadata().ok();
 
-                    let children = match entry_type {
-                        EntryType::Directory => self.scan_directory(&path),
-                        EntryType::File => Vec::new(),
-                    };
+                        let logical_size = match &metadata {
+                            Some(metadata) if metadata.is_file() => metadata.len(),
+                            _ => 0,
+                        };
 
-                    entries.push(Entry {
-                        name: item.file_name().to_string_lossy().into_owned(),
-                        path: path.clone(),
+                        let file_attributes = metadata
+                            .as_ref()
+                            .map(|metadata| metadata.file_attributes())
+                            .unwrap_or(0);
 
-                        entry_type,
+                        let children = match entry_type {
+                            EntryType::Directory => self.scan_directory(&path, errors),
+                            EntryType::File => Vec::new(),
+                        };
 
-                        metadata: EntryMetadata {
-                            logical_size,
-                            created: metadata
-                                .as_ref()
-                                .and_then(|metadata| metadata.created().ok()),
-                            modified: metadata
-                                .as_ref()
-                                .and_then(|metadata| metadata.modified().ok()),
-                            accessed: metadata
-                                .as_ref()
-                                .and_then(|metadata| metadata.accessed().ok()),
-                        },
+                        entries.push(Entry {
+                            name: item.file_name().to_string_lossy().into_owned(),
+                            extension,
+                            path: path.clone(),
+                            entry_type,
 
-                        attributes: EntryAttributes {
-                            hidden: false,
-                            system: false,
-                            read_only: false,
-                            archive: false,
-                        },
+                            metadata: EntryMetadata {
+                                logical_size,
+                                created: metadata
+                                    .as_ref()
+                                    .and_then(|metadata| metadata.created().ok()),
+                                modified: metadata
+                                    .as_ref()
+                                    .and_then(|metadata| metadata.modified().ok()),
+                                accessed: metadata
+                                    .as_ref()
+                                    .and_then(|metadata| metadata.accessed().ok()),
+                            },
 
-                        children,
-                    });
+                            attributes: EntryAttributes {
+                                hidden: (file_attributes & FILE_ATTRIBUTE_HIDDEN) != 0,
+                                system: (file_attributes & FILE_ATTRIBUTE_SYSTEM) != 0,
+                                read_only: (file_attributes & FILE_ATTRIBUTE_READONLY) != 0,
+                                archive: (file_attributes & FILE_ATTRIBUTE_ARCHIVE) != 0,
+                            },
+
+                            children,
+                        });
+                    }
                 }
             }
-        }
 
+            Err(error) => {
+                errors.push(ScanError {
+                    path: path.to_path_buf(),
+                    message: error.to_string(),
+                });
+            }
+        }
         entries
     }
 }
