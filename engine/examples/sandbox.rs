@@ -11,6 +11,11 @@ fn main() {
     let result = engine.scan(Path::new("D:\\"));
 
     let analysis = engine.analyze(&result);
+    println!("Available Drives:");
+
+    for drive in engine.drives() {
+        println!("{} ({})", drive.name, drive.path);
+    }
 
     println!("DiskScope {}\n", engine.version());
 

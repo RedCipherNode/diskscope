@@ -1,4 +1,5 @@
 pub mod analysis;
+pub mod drive;
 pub mod empty_directory;
 pub mod empty_file;
 pub mod entry;
