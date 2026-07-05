@@ -1,28 +1,13 @@
-import { useEffect, useState } from "react";
-import { getEngineVersion } from "./services/engine";
+import { MainLayout } from "./layouts/MainLayout";
+import { HomePage } from "./pages/HomePage";
+import "./styles/variables.css";
+import "./styles/globals.css";
 
 function App() {
-    const [version, setVersion] = useState("Loading...");
-
-    useEffect(() => {
-        async function load() {
-            try {
-                const version = await getEngineVersion();
-                setVersion(version);
-            } catch (error) {
-                console.error(error);
-                setVersion("Error");
-            }
-        }
-
-        load();
-    }, []);
-
     return (
-        <main>
-            <h1>DiskScope</h1>
-            <p>Engine Version: {version}</p>
-        </main>
+        <MainLayout>
+            <HomePage />
+        </MainLayout>
     );
 }
 
